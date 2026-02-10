@@ -1,0 +1,8 @@
+{
+  "name": "NexGen Office Data Management System",
+  "description": "A professional-grade enterprise data management platform featuring secure authentication, localized financial tracking (INR), real-time analytics dashboards, and robust CRUD operations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
