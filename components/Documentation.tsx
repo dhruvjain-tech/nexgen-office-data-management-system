@@ -21,19 +21,20 @@ const Documentation: React.FC = () => {
               </ul>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <h4 className="font-bold text-slate-800 mb-2">Data Engine</h4>
+              <h4 className="font-bold text-slate-800 mb-2">Analytics Engine</h4>
               <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Time-series analytics</li>
-                <li>• JSON-based persistence</li>
-                <li>• CSV/PDF export logic</li>
+                <li>• Multi-timeframe sales bucketing</li>
+                <li>• Real-time employee leaderboard</li>
+                <li>• Individual performance drill-down</li>
+                <li>• Dynamic chart re-scaling (Recharts)</li>
               </ul>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">
-              <h4 className="font-bold text-slate-800 mb-2">Core UX</h4>
+              <h4 className="font-bold text-slate-800 mb-2">Data Integrity</h4>
               <ul className="text-sm text-slate-600 space-y-1">
-                <li>• Contextual Modal flows</li>
-                <li>• Multi-state pagination</li>
-                <li>• Real-time search indexing</li>
+                <li>• Real-time stock validation</li>
+                <li>• JSON-based persistence</li>
+                <li>• Automated status updates</li>
               </ul>
             </div>
           </div>
@@ -41,79 +42,46 @@ const Documentation: React.FC = () => {
       </section>
 
       <section>
-        <h2 className="text-3xl font-extrabold text-slate-900 mb-6 border-l-4 border-blue-500 pl-4">Enhanced Database Schema</h2>
+        <h2 className="text-3xl font-extrabold text-slate-900 mb-6 border-l-4 border-blue-500 pl-4">Reporting SQL Schemas</h2>
         <div className="bg-slate-900 text-slate-300 p-8 rounded-2xl font-mono text-xs overflow-x-auto shadow-2xl">
           <pre>{`
--- Users Table: Extended for Management
-CREATE TABLE users (
-    id VARCHAR(50) PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255),
-    role ENUM('ADMIN', 'USER') DEFAULT 'USER',
-    status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP,
-    INDEX (role, status)
-);
+-- Aggregating Sales by Employee & Month
+SELECT 
+    u.username,
+    SUM(o.total_amount) as gross_sales,
+    COUNT(o.id) as volume,
+    AVG(o.total_amount) as ticket_size
+FROM users u
+JOIN sales_orders o ON u.id = o.user_id
+WHERE o.status = 'APPROVED'
+GROUP BY u.username, DATE_TRUNC('month', o.created_at);
 
--- Inventory Table: Asset Tracking
-CREATE TABLE inventory (
-    id VARCHAR(50) PRIMARY KEY,
-    item_name VARCHAR(255) NOT NULL,
-    category VARCHAR(100),
-    quantity INT DEFAULT 0,
-    unit_price_inr DECIMAL(15, 2),
-    status ENUM('In Stock', 'Low Stock', 'Out of Stock'),
-    location VARCHAR(100),
-    last_updated TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Audit Log Concept (Planned)
-CREATE TABLE system_logs (
-    log_id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    action_type VARCHAR(50),
-    user_id VARCHAR(50),
-    description TEXT,
-    timestamp DATETIME
-);
+-- Identifying Top Performers
+SELECT 
+    username, 
+    SUM(total_amount) as total
+FROM sales_orders
+WHERE status = 'APPROVED'
+GROUP BY username
+ORDER BY total DESC
+LIMIT 1;
           `}</pre>
         </div>
       </section>
 
       <section>
-        <h2 className="text-3xl font-extrabold text-slate-900 mb-6 border-l-4 border-blue-500 pl-4">Management API (Simulated)</h2>
+        <h2 className="text-3xl font-extrabold text-slate-900 mb-6 border-l-4 border-blue-500 pl-4">Interview Readiness</h2>
         <div className="space-y-4">
-          <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-bold">GET</span>
-              <code className="text-sm font-bold text-slate-800">/api/v1/users</code>
-            </div>
-            <p className="text-xs text-slate-500">Retrieves full registry of users. Supports query params: <code>?role=ADMIN&status=ACTIVE</code>.</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold">PATCH</span>
-              <code className="text-sm font-bold text-slate-800">/api/v1/users/:id/status</code>
-            </div>
-            <p className="text-xs text-slate-500">Toggles account access. Payload: <code>{ "{ status: 'INACTIVE' }" }</code>. Triggers session invalidation for targets.</p>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-3xl font-extrabold text-slate-900 mb-6 border-l-4 border-blue-500 pl-4">Resume & Interview FAQ</h2>
-        <div className="space-y-4">
-          <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <h4 className="font-bold text-slate-800 mb-2 italic text-sm">Resume Bullet Point:</h4>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h4 className="font-bold text-slate-800 mb-2 text-sm italic">Performance Analytics Logic:</h4>
             <p className="text-sm text-slate-600">
-              "Engineered a full-scale Administrative User Management module with Role-Based Access Control (RBAC). Implemented features for dynamic role assignment, account lifecycle management (Active/Inactive states), and administrative password recovery, ensuring secure and scalable workforce management."
+              "The system implements a complex aggregation engine. It filters 'APPROVED' orders and uses high-order JS functions to bucket data into Daily, Weekly, and Monthly timeframes. This simulates high-performance SQL window functions and aggregations directly in the client layer."
             </p>
           </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200">
-            <h4 className="font-bold text-slate-800 mb-2 text-sm">How do you secure user data in this system?</h4>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h4 className="font-bold text-slate-800 mb-2 text-sm italic">Data Reliability:</h4>
             <p className="text-sm text-slate-600">
-              "In a production environment, we would use bcrypt or Argon2 for password hashing, enforce HTTPS/TLS for all traffic, and implement JWT-based session management with short-lived tokens and refresh rotations."
+              "To ensure chart accuracy, the reporting engine only processes orders with a 'FINALIZED' status (APPROVED). This prevents projections or pending leads from skewing actual corporate revenue figures."
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import InventoryTable from './components/InventoryTable';
 import Reports from './components/Reports';
 import Documentation from './components/Documentation';
 import UserManagement from './components/UserManagement';
+import SalesOrders from './components/SalesOrders';
 import { User, UserRole } from './types';
 
 const App: React.FC = () => {
@@ -41,6 +42,7 @@ const App: React.FC = () => {
         >
           <Route index element={<Dashboard />} />
           <Route path="inventory" element={<InventoryTable role={user?.role || UserRole.USER} />} />
+          <Route path="sales" element={user ? <SalesOrders user={user} /> : <Navigate to="/login" />} />
           <Route path="reports" element={<Reports />} />
           <Route path="users" element={user?.role === UserRole.ADMIN ? <UserManagement /> : <Navigate to="/" />} />
           <Route path="docs" element={user?.role === UserRole.ADMIN ? <Documentation /> : <Navigate to="/" />} />

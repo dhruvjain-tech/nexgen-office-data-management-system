@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { User, UserRole } from '../types';
+import { DataService } from '../services/dataService';
+import { User } from '../types';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -10,37 +11,39 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsAuthenticating(true);
 
     const trimmedUsername = username.trim();
     const trimmedPassword = password.trim();
 
     if (!trimmedUsername || !trimmedPassword) {
       setError('Please enter both User ID and password.');
+      setIsAuthenticating(false);
       return;
     }
 
-    // Specific Admin Credentials Check
-    const isAdmin = 
-      trimmedUsername.toLowerCase() === 'dhruv jain' && 
-      trimmedPassword === 'admindhruv1234';
-
-    const selectedRole = isAdmin ? UserRole.ADMIN : UserRole.USER;
-
-    onLogin({
-      id: Math.random().toString(36).substr(2, 9),
-      username: trimmedUsername,
-      role: selectedRole,
-      email: `${trimmedUsername.toLowerCase().replace(/\s+/g, '.')}@nexgen.com`
-    });
+    try {
+      const user = await DataService.authenticate(trimmedUsername, trimmedPassword);
+      
+      if (user) {
+        onLogin(user);
+      } else {
+        setError('Invalid credentials or account is deactivated.');
+      }
+    } catch (err) {
+      setError('System authentication error. Please try again.');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-      {/* Background Polish */}
       <div className="absolute inset-0 overflow-hidden opacity-10 pointer-events-none">
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500 rounded-full blur-3xl"></div>
@@ -66,9 +69,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">User ID / Name</label>
             <input
               required
+              disabled={isAuthenticating}
               type="text"
               placeholder="Enter your ID"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all disabled:opacity-50"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -78,9 +82,10 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2 tracking-wider">Security Password</label>
             <input
               required
+              disabled={isAuthenticating}
               type="password"
               placeholder="••••••••"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-all disabled:opacity-50"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -89,12 +94,19 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2"
+              disabled={isAuthenticating}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
             >
-              <span>Secure Login</span>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
+              {isAuthenticating ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span>Secure Login</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </>
+              )}
             </button>
           </div>
 

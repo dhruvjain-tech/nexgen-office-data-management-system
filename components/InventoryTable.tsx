@@ -12,6 +12,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [cloudSyncEnabled, setCloudSyncEnabled] = useState(true);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -23,14 +26,15 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
   });
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      await new Promise(r => setTimeout(r, 400));
-      setRecords(DataService.getRecords());
-      setLoading(false);
-    };
     fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 400));
+    setRecords(DataService.getRecords());
+    setLoading(false);
+  };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -41,11 +45,25 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
     r.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Permanently delete this inventory record?')) {
-      DataService.deleteRecord(id);
+      setIsSyncing(true);
+      await DataService.deleteRecord(id);
       setRecords(DataService.getRecords());
+      setIsSyncing(false);
     }
+  };
+
+  const handleEdit = (record: InventoryRecord) => {
+    setEditingId(record.id);
+    setFormData({
+      itemName: record.itemName,
+      category: record.category,
+      quantity: record.quantity,
+      unitPrice: record.unitPrice,
+      location: record.location
+    });
+    setShowModal(true);
   };
 
   const handleExport = () => {
@@ -61,12 +79,36 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
     link.click();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    DataService.saveRecord(formData);
-    setRecords(DataService.getRecords());
+  const closeModal = () => {
     setShowModal(false);
+    setEditingId(null);
     setFormData({ itemName: '', category: '', quantity: 0, unitPrice: 0, location: '' });
+  };
+
+  const handleSubmit = async (e: React.FormEvent, keepOpen: boolean = false) => {
+    e.preventDefault();
+    setIsSyncing(true);
+    
+    try {
+      if (editingId) {
+        await DataService.updateRecord(editingId, formData);
+      } else {
+        await DataService.saveRecord(formData);
+      }
+      
+      setRecords(DataService.getRecords());
+      
+      if (!keepOpen) {
+        closeModal();
+      } else {
+        // Reset form but keep modal for another entry
+        setFormData({ itemName: '', category: '', quantity: 0, unitPrice: 0, location: '' });
+      }
+    } catch (err) {
+      alert("Database error: Failed to commit changes to backend.");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -85,7 +127,13 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
           />
           <span className="absolute left-3 top-3.5 opacity-40" aria-hidden="true">🔍</span>
         </div>
-        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
+        <div className="flex flex-wrap gap-2 w-full lg:w-auto items-center">
+          {isSyncing && (
+            <div className="flex items-center gap-2 mr-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg animate-pulse border border-blue-100">
+              <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce"></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Backend Sync...</span>
+            </div>
+          )}
           <button 
             onClick={handleExport}
             aria-label="Export inventory to CSV"
@@ -159,13 +207,24 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
                         🔍
                       </button>
                       {role === UserRole.ADMIN && (
-                        <button 
-                          onClick={() => handleDelete(record.id)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors focus:ring-2 focus:ring-red-500 outline-none"
-                          aria-label={`Delete ${record.itemName}`}
-                        >
-                          🗑️
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => handleEdit(record)}
+                            disabled={isSyncing}
+                            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors focus:ring-2 focus:ring-amber-500 outline-none disabled:opacity-50"
+                            aria-label={`Edit ${record.itemName}`}
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(record.id)}
+                            disabled={isSyncing}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors focus:ring-2 focus:ring-red-500 outline-none disabled:opacity-50"
+                            aria-label={`Delete ${record.itemName}`}
+                          >
+                            🗑️
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -201,9 +260,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
         >
           <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 my-8">
             <div className="bg-slate-50 border-b border-slate-200 p-6 flex justify-between items-center">
-              <h3 id="modal-title" className="text-lg font-bold text-slate-800">New Inventory Entry</h3>
+              <div>
+                <h3 id="modal-title" className="text-lg font-bold text-slate-800">
+                  {editingId ? 'Edit Inventory Record' : 'New Inventory Entry'}
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Core Database Terminal</p>
+              </div>
               <button 
-                onClick={() => setShowModal(false)} 
+                onClick={closeModal} 
                 className="text-slate-400 hover:text-slate-600 text-3xl focus:ring-2 focus:ring-slate-300 rounded-lg p-1 outline-none"
                 aria-label="Close modal"
               >
@@ -211,7 +275,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
               </button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <form onSubmit={(e) => handleSubmit(e, false)} className="p-8 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="sm:col-span-2">
                   <label htmlFor="item-name" className="block text-[10px] font-bold text-slate-500 uppercase mb-2 tracking-widest">Asset Identifier</label>
@@ -240,20 +304,47 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ role }) => {
                 </div>
               </div>
 
+              {/* Sync Option */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-700">Cloud Database Sync</h4>
+                  <p className="text-[10px] text-slate-500">Automatically backup changes to backend server</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={cloudSyncEnabled} onChange={() => setCloudSyncEnabled(!cloudSyncEnabled)} />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button 
                   type="button" 
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-4 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all outline-none focus:ring-2 focus:ring-slate-300"
+                  onClick={closeModal}
+                  disabled={isSyncing}
+                  className="flex-1 py-4 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all outline-none focus:ring-2 focus:ring-slate-300 disabled:opacity-50"
                 >
                   Discard
                 </button>
-                <button 
-                  type="submit"
-                  className="flex-1 py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-xl shadow-blue-500/30 transition-all outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  Authorize Record
-                </button>
+                <div className="flex-1 flex flex-col gap-2">
+                  <button 
+                    type="submit"
+                    disabled={isSyncing}
+                    className="w-full py-4 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 shadow-xl transition-all outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {isSyncing && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
+                    {editingId ? 'Update & Commit' : 'Initialize & Save'}
+                  </button>
+                  {!editingId && (
+                    <button 
+                      type="button"
+                      onClick={(e) => handleSubmit(e, true)}
+                      disabled={isSyncing}
+                      className="w-full py-2.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-xl border border-blue-100 hover:bg-blue-100 transition-all uppercase tracking-widest disabled:opacity-50"
+                    >
+                      Save & Add Another
+                    </button>
+                  )}
+                </div>
               </div>
             </form>
           </div>

@@ -15,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout }) => {
   const navItems = [
     { label: 'Dashboard', path: '/', icon: '📊', adminOnly: false },
     { label: 'Inventory', path: '/inventory', icon: '📦', adminOnly: false },
+    { label: 'Sales Orders', path: '/sales', icon: '📝', adminOnly: false },
     { label: 'Reports', path: '/reports', icon: '📈', adminOnly: false },
     { label: 'Users', path: '/users', icon: '👥', adminOnly: true },
     { label: 'Architecture & Docs', path: '/docs', icon: '📝', adminOnly: true },
